@@ -20,7 +20,11 @@ const upload = multer({ storage: multer.memoryStorage() });
 function setCorsHeaders(req, res) {
   // NOTE: For simplest setup, default to permissive CORS. For production, set
   // CORS_ORIGIN to your exact deployed client origin.
-  const origin = process.env.CORS_ORIGIN || '*';
+  let origin = String(process.env.CORS_ORIGIN || '*').trim();
+  // An Origin must not include a trailing slash. Also avoids easy misconfig.
+  if (origin !== '*') {
+    origin = origin.replace(/\/+$/, '');
+  }
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

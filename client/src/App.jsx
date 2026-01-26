@@ -13,7 +13,11 @@ function computeStats(values) {
 }
 
 function App() {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  // Normalize to avoid accidental double-slashes like "https://...//api/transform",
+  // which Vercel will redirect (308) and browsers will treat as a CORS failure.
+  const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080')
+    .trim()
+    .replace(/\/+$/, '');
   const originalCanvasRef = useRef(null);
   const transformedCanvasRef = useRef(null);
 
