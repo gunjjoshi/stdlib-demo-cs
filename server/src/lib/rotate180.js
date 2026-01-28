@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
 import floor from '@stdlib/math-base-special-floor';
 
 
@@ -31,20 +30,29 @@ import floor from '@stdlib/math-base-special-floor';
 * @returns {ImageData} modified image data
 */
 function rotate180( imageData ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const numPixels = imageData.width * imageData.height;
+	const halfPixels = floor( numPixels / 2 );
 
-	for ( let i = 0; i < floor( ( height * width ) / 2 ); i++ ) {
-		const row = floor( i / width );
-		const col = i % width;
-		const endRow = height - 1 - row;
-		const endCol = width - 1 - col;
-		for ( let c = 0; c < 4; c++ ) {
-			const temp = arr.get( row, col, c );
-			arr.set( row, col, c, arr.get( endRow, endCol, c ) );
-			arr.set( endRow, endCol, c, temp );
-		}
+	// Swap pixels from the beginning and end of the buffer:
+	for ( let i = 0; i < halfPixels; i++ ) {
+		const startIdx = i * 4;
+		const endIdx = ( numPixels - 1 - i ) * 4;
+
+		const tempR = data[ startIdx ];
+		const tempG = data[ startIdx + 1 ];
+		const tempB = data[ startIdx + 2 ];
+		const tempA = data[ startIdx + 3 ];
+
+		data[ startIdx ] = data[ endIdx ];
+		data[ startIdx + 1 ] = data[ endIdx + 1 ];
+		data[ startIdx + 2 ] = data[ endIdx + 2 ];
+		data[ startIdx + 3 ] = data[ endIdx + 3 ];
+
+		data[ endIdx ] = tempR;
+		data[ endIdx + 1 ] = tempG;
+		data[ endIdx + 2 ] = tempB;
+		data[ endIdx + 3 ] = tempA;
 	}
 	return imageData;
 }

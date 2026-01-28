@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray, ndarray } from './ndarray.js';
 import round from '@stdlib/math-base-special-round';
 import Uint8ClampedArray from '@stdlib/array-uint8c';
 
@@ -33,13 +32,12 @@ import Uint8ClampedArray from '@stdlib/array-uint8c';
 * @returns {ImageData} modified image data
 */
 function boxBlur( imageData, radius = 1 ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const width = imageData.width;
+	const height = imageData.height;
+	const rowBytes = width * 4;
 
-	// Create a copy of the original data as an ndarray:
-	const originalData = new Uint8ClampedArray( arr.data );
-	const original = new ndarray( 'uint8c', originalData, arr.shape, arr.strides, arr.offset, 'row-major' ); // eslint-disable-line max-len
+	const original = new Uint8ClampedArray( data );
 
 	for ( let row = 0; row < height; row++ ) {
 		for ( let col = 0; col < width; col++ ) {
@@ -48,21 +46,28 @@ function boxBlur( imageData, radius = 1 ) {
 			let sumB = 0;
 			let count = 0;
 
+			// Accumulate values from neighboring pixels:
 			for ( let ky = -radius; ky <= radius; ky++ ) {
-				for ( let kx = -radius; kx <= radius; kx++ ) {
-					const ny = row + ky;
-					const nx = col + kx;
-					if ( ny >= 0 && ny < height && nx >= 0 && nx < width ) {
-						sumR += original.get( ny, nx, 0 );
-						sumG += original.get( ny, nx, 1 );
-						sumB += original.get( ny, nx, 2 );
-						count += 1;
+				const ny = row + ky;
+				if ( ny >= 0 && ny < height ) {
+					for ( let kx = -radius; kx <= radius; kx++ ) {
+						const nx = col + kx;
+						if ( nx >= 0 && nx < width ) {
+							const idx = ( ny * rowBytes ) + ( nx * 4 );
+							sumR += original[ idx ];
+							sumG += original[ idx + 1 ];
+							sumB += original[ idx + 2 ];
+							count += 1;
+						}
 					}
 				}
 			}
-			arr.set( row, col, 0, round( sumR / count ) );
-			arr.set( row, col, 1, round( sumG / count ) );
-			arr.set( row, col, 2, round( sumB / count ) );
+
+			// Write averaged values:
+			const outIdx = ( row * rowBytes ) + ( col * 4 );
+			data[ outIdx ] = round( sumR / count );
+			data[ outIdx + 1 ] = round( sumG / count );
+			data[ outIdx + 2 ] = round( sumB / count );
 		}
 	}
 	return imageData;

@@ -18,7 +18,21 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
+import unary from '@stdlib/ndarray-base-unary';
+
+
+// FUNCTIONS //
+
+/**
+* Inverts a single color value.
+*
+* @private
+* @param {number} x - input value (0-255)
+* @returns {number} inverted value (255 - x)
+*/
+function invertValue( x ) {
+	return 255 - x;
+}
 
 
 // MAIN //
@@ -30,19 +44,44 @@ import { createNdarray } from './ndarray.js';
 * @returns {ImageData} modified image data
 */
 function invert( imageData ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const numPixels = imageData.width * imageData.height;
 
-	console.log('Inverting')
+	/*
+	* Create ndarray-like objects for each RGB channel.
+	*
+	* Each channel is accessed with stride 4 (skipping RGBA to next RGBA).
+	* The offset determines which channel: 0=R, 1=G, 2=B.
+	*/
+	const rChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 0,
+		'order': 'row-major'
+	};
+	const gChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 1,
+		'order': 'row-major'
+	};
+	const bChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 2,
+		'order': 'row-major'
+	};
 
-	for ( let row = 0; row < height; row++ ) {
-		for ( let col = 0; col < width; col++ ) {
-			arr.set( row, col, 0, 255 - arr.get( row, col, 0 ) );
-			arr.set( row, col, 1, 255 - arr.get( row, col, 1 ) );
-			arr.set( row, col, 2, 255 - arr.get( row, col, 2 ) );
-		}
-	}
+	unary( [ rChannel, rChannel ], invertValue );
+	unary( [ gChannel, gChannel ], invertValue );
+	unary( [ bChannel, bChannel ], invertValue );
+
 	return imageData;
 }
 

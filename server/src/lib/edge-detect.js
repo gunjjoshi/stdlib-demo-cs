@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray, ndarray } from './ndarray.js';
 import clamp from '@stdlib/math-base-special-clamp';
 import round from '@stdlib/math-base-special-round';
 import sqrt from '@stdlib/math-base-special-sqrt';
@@ -27,29 +26,11 @@ import Uint8ClampedArray from '@stdlib/array-uint8c';
 
 // VARIABLES //
 
-const SOBEL_X = [
-	-1,
-	0,
-	1,
-	-2,
-	0,
-	2,
-	-1,
-	0,
-	1
-];
+// Sobel X kernel:
+const SOBEL_X = [ -1, 0, 1, -2, 0, 2, -1, 0, 1 ];
 
-const SOBEL_Y = [
-	-1,
-	-2,
-	-1,
-	0,
-	0,
-	0,
-	1,
-	2,
-	1
-];
+// Sobel Y kernel:
+const SOBEL_Y = [ -1, -2, -1, 0, 0, 0, 1, 2, 1 ];
 
 
 // MAIN //
@@ -61,36 +42,42 @@ const SOBEL_Y = [
 * @returns {ImageData} modified image data
 */
 function edgeDetect( imageData ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const width = imageData.width;
+	const height = imageData.height;
+	const rowBytes = width * 4;
 
-	// Create a copy of the original data as an ndarray:
-	const originalData = new Uint8ClampedArray( arr.data );
-	const original = new ndarray( 'uint8c', originalData, arr.shape, arr.strides, arr.offset, 'row-major' ); // eslint-disable-line max-len
+	const original = new Uint8ClampedArray( data );
 
 	for ( let row = 1; row < height - 1; row++ ) {
 		for ( let col = 1; col < width - 1; col++ ) {
 			let gx = 0;
 			let gy = 0;
 
+			// Apply Sobel operators:
 			for ( let ky = -1; ky <= 1; ky++ ) {
 				for ( let kx = -1; kx <= 1; kx++ ) {
 					const ny = row + ky;
 					const nx = col + kx;
+					const idx = ( ny * rowBytes ) + ( nx * 4 );
 					const ki = ( ( ky + 1 ) * 3 ) + ( kx + 1 );
-					const r = original.get( ny, nx, 0 );
-					const g = original.get( ny, nx, 1 );
-					const b = original.get( ny, nx, 2 );
+					const r = original[ idx ];
+					const g = original[ idx + 1 ];
+					const b = original[ idx + 2 ];
+
+					// Compute grayscale:
 					const gray = round( ( 0.299 * r ) + ( 0.587 * g ) + ( 0.114 * b ) );
 					gx += gray * SOBEL_X[ ki ];
 					gy += gray * SOBEL_Y[ ki ];
 				}
 			}
+
+			// Compute gradient magnitude:
 			const mag = clamp( sqrt( ( gx * gx ) + ( gy * gy ) ), 0, 255 );
-			arr.set( row, col, 0, mag );
-			arr.set( row, col, 1, mag );
-			arr.set( row, col, 2, mag );
+			const outIdx = ( row * rowBytes ) + ( col * 4 );
+			data[ outIdx ] = mag;
+			data[ outIdx + 1 ] = mag;
+			data[ outIdx + 2 ] = mag;
 		}
 	}
 	return imageData;

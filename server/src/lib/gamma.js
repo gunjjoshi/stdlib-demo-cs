@@ -1,7 +1,7 @@
 /**
 * @license Apache-2.0
 *
-* Copyright (c) 2024 The Stdlib Authors.
+* Copyright (c) 2026 The Stdlib Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,8 +18,9 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
+import unary from '@stdlib/ndarray-base-unary';
 import pow from '@stdlib/math-base-special-pow';
+import round from '@stdlib/math-base-special-round';
 
 
 // MAIN //
@@ -32,21 +33,57 @@ import pow from '@stdlib/math-base-special-pow';
 * @returns {ImageData} modified image data
 */
 function gamma( imageData, gammaValue = 1.0 ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const numPixels = imageData.width * imageData.height;
 	const gammaCorrection = 1.0 / gammaValue;
 
-	for ( let row = 0; row < height; row++ ) {
-		for ( let col = 0; col < width; col++ ) {
-			const r = 255 * pow( arr.get( row, col, 0 ) / 255, gammaCorrection );
-			const g = 255 * pow( arr.get( row, col, 1 ) / 255, gammaCorrection );
-			const b = 255 * pow( arr.get( row, col, 2 ) / 255, gammaCorrection );
-			arr.set( row, col, 0, r );
-			arr.set( row, col, 1, g );
-			arr.set( row, col, 2, b );
-		}
+	// Build lookup table for gamma correction:
+	const lut = new Uint8Array( 256 );
+	for ( let i = 0; i < 256; i++ ) {
+		lut[ i ] = round( 255 * pow( i / 255, gammaCorrection ) );
 	}
+
+	/**
+	* Applies gamma correction to a single color value using lookup table.
+	*
+	* @private
+	* @param {number} x - input value (0-255)
+	* @returns {number} gamma-corrected value
+	*/
+	function gammaCorrect( x ) {
+		return lut[ x ];
+	}
+
+	// Create ndarray-like objects for each RGB channel:
+	const rChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 0,
+		'order': 'row-major'
+	};
+	const gChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 1,
+		'order': 'row-major'
+	};
+	const bChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 2,
+		'order': 'row-major'
+	};
+
+	unary( [ rChannel, rChannel ], gammaCorrect );
+	unary( [ gChannel, gChannel ], gammaCorrect );
+	unary( [ bChannel, bChannel ], gammaCorrect );
+
 	return imageData;
 }
 

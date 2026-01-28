@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
 import floor from '@stdlib/math-base-special-floor';
 
 
@@ -31,18 +30,33 @@ import floor from '@stdlib/math-base-special-floor';
 * @returns {ImageData} modified image data
 */
 function flipHorizontal( imageData ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const width = imageData.width;
+	const height = imageData.height;
+	const rowBytes = width * 4;
+	const halfWidth = floor( width / 2 );
 
+	// Process each row and swap pixels from left to right:
 	for ( let row = 0; row < height; row++ ) {
-		for ( let col = 0; col < floor( width / 2 ); col++ ) {
-			const rightCol = width - 1 - col;
-			for ( let c = 0; c < 4; c++ ) {
-				const temp = arr.get( row, col, c );
-				arr.set( row, col, c, arr.get( row, rightCol, c ) );
-				arr.set( row, rightCol, c, temp );
-			}
+		const rowOffset = row * rowBytes;
+		for ( let col = 0; col < halfWidth; col++ ) {
+			const leftIdx = rowOffset + ( col * 4 );
+			const rightIdx = rowOffset + ( ( width - 1 - col ) * 4 );
+
+			const tempR = data[ leftIdx ];
+			const tempG = data[ leftIdx + 1 ];
+			const tempB = data[ leftIdx + 2 ];
+			const tempA = data[ leftIdx + 3 ];
+
+			data[ leftIdx ] = data[ rightIdx ];
+			data[ leftIdx + 1 ] = data[ rightIdx + 1 ];
+			data[ leftIdx + 2 ] = data[ rightIdx + 2 ];
+			data[ leftIdx + 3 ] = data[ rightIdx + 3 ];
+
+			data[ rightIdx ] = tempR;
+			data[ rightIdx + 1 ] = tempG;
+			data[ rightIdx + 2 ] = tempB;
+			data[ rightIdx + 3 ] = tempA;
 		}
 	}
 	return imageData;

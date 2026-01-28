@@ -1,7 +1,7 @@
 /**
 * @license Apache-2.0
 *
-* Copyright (c) 2024 The Stdlib Authors.
+* Copyright (c) 2026 The Stdlib Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
 import clamp from '@stdlib/math-base-special-clamp';
 import round from '@stdlib/math-base-special-round';
 
@@ -33,24 +32,19 @@ import round from '@stdlib/math-base-special-round';
 * @returns {ImageData} modified image data
 */
 function saturation( imageData, amount ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const len = data.length;
 	const factor = 1 + ( amount / 100 );
 
-	for ( let row = 0; row < height; row++ ) {
-		for ( let col = 0; col < width; col++ ) {
-			const r = arr.get( row, col, 0 );
-			const g = arr.get( row, col, 1 );
-			const b = arr.get( row, col, 2 );
-			const gray = ( 0.299 * r ) + ( 0.587 * g ) + ( 0.114 * b );
-			const newR = clamp( round( gray + ( ( r - gray ) * factor ) ), 0, 255 );
-			const newG = clamp( round( gray + ( ( g - gray ) * factor ) ), 0, 255 );
-			const newB = clamp( round( gray + ( ( b - gray ) * factor ) ), 0, 255 );
-			arr.set( row, col, 0, newR );
-			arr.set( row, col, 1, newG );
-			arr.set( row, col, 2, newB );
-		}
+	// Compute grayscale, then interpolate between gray and original color:
+	for ( let i = 0; i < len; i += 4 ) {
+		const r = data[ i ];
+		const g = data[ i + 1 ];
+		const b = data[ i + 2 ];
+		const gray = ( 0.299 * r ) + ( 0.587 * g ) + ( 0.114 * b );
+		data[ i ] = clamp( round( gray + ( ( r - gray ) * factor ) ), 0, 255 );
+		data[ i + 1 ] = clamp( round( gray + ( ( g - gray ) * factor ) ), 0, 255 );
+		data[ i + 2 ] = clamp( round( gray + ( ( b - gray ) * factor ) ), 0, 255 );
 	}
 	return imageData;
 }

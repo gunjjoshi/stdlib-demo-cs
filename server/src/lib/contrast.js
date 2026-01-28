@@ -1,7 +1,7 @@
 /**
 * @license Apache-2.0
 *
-* Copyright (c) 2024 The Stdlib Authors.
+* Copyright (c) 2026 The Stdlib Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
+import unary from '@stdlib/ndarray-base-unary';
 import clamp from '@stdlib/math-base-special-clamp';
 import round from '@stdlib/math-base-special-round';
 
@@ -33,24 +33,57 @@ import round from '@stdlib/math-base-special-round';
 * @returns {ImageData} modified image data
 */
 function contrast( imageData, amount ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const numPixels = imageData.width * imageData.height;
 	const factor = ( 259 * ( amount + 255 ) ) / ( 255 * ( 259 - amount ) );
 
-	for ( let row = 0; row < height; row++ ) {
-		for ( let col = 0; col < width; col++ ) {
-			const r = arr.get( row, col, 0 );
-			const g = arr.get( row, col, 1 );
-			const b = arr.get( row, col, 2 );
-			const newR = clamp( round( ( ( r - 128 ) * factor ) + 128 ), 0, 255 );
-			const newG = clamp( round( ( ( g - 128 ) * factor ) + 128 ), 0, 255 );
-			const newB = clamp( round( ( ( b - 128 ) * factor ) + 128 ), 0, 255 );
-			arr.set( row, col, 0, newR );
-			arr.set( row, col, 1, newG );
-			arr.set( row, col, 2, newB );
-		}
+	// Build lookup table for contrast adjustment:
+	const lut = new Uint8Array( 256 );
+	for ( let i = 0; i < 256; i++ ) {
+		lut[ i ] = clamp( round( ( ( i - 128 ) * factor ) + 128 ), 0, 255 );
 	}
+
+	/**
+	* Adjusts contrast of a single color value using lookup table.
+	*
+	* @private
+	* @param {number} x - input value (0-255)
+	* @returns {number} contrast-adjusted value
+	*/
+	function adjustContrast( x ) {
+		return lut[ x ];
+	}
+
+	// Create ndarray-like objects for each RGB channel:
+	const rChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 0,
+		'order': 'row-major'
+	};
+	const gChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 1,
+		'order': 'row-major'
+	};
+	const bChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 2,
+		'order': 'row-major'
+	};
+
+	unary( [ rChannel, rChannel ], adjustContrast );
+	unary( [ gChannel, gChannel ], adjustContrast );
+	unary( [ bChannel, bChannel ], adjustContrast );
+
 	return imageData;
 }
 

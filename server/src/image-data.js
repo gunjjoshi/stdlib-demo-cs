@@ -1,18 +1,4 @@
-/**
- * Minimal ImageData polyfill for Node.
- *
- * The transform functions expect an object with:
- * - data: Uint8ClampedArray
- * - width: number
- * - height: number
- */
-
 class ImageData {
-  /**
-   * @param {Uint8ClampedArray|ArrayBuffer|ArrayLike<number>} data
-   * @param {number} width
-   * @param {number} height
-   */
   constructor(data, width, height) {
     if (!Number.isFinite(width) || !Number.isFinite(height)) {
       throw new TypeError('ImageData width/height must be numbers');

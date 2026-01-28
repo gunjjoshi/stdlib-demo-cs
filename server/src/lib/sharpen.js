@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray, ndarray } from './ndarray.js';
 import clamp from '@stdlib/math-base-special-clamp';
 import round from '@stdlib/math-base-special-round';
 import Uint8ClampedArray from '@stdlib/array-uint8c';
@@ -26,17 +25,8 @@ import Uint8ClampedArray from '@stdlib/array-uint8c';
 
 // VARIABLES //
 
-const KERNEL = [
-	0,
-	-1,
-	0,
-	-1,
-	5,
-	-1,
-	0,
-	-1,
-	0
-];
+// Sharpening kernel (3x3):
+const KERNEL = [ 0, -1, 0, -1, 5, -1, 0, -1, 0 ];
 
 
 // MAIN //
@@ -48,13 +38,12 @@ const KERNEL = [
 * @returns {ImageData} modified image data
 */
 function sharpen( imageData ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const width = imageData.width;
+	const height = imageData.height;
+	const rowBytes = width * 4;
 
-	// Create a copy of the original data as an ndarray:
-	const originalData = new Uint8ClampedArray( arr.data );
-	const original = new ndarray( 'uint8c', originalData, arr.shape, arr.strides, arr.offset, 'row-major' ); // eslint-disable-line max-len
+	const original = new Uint8ClampedArray( data );
 
 	for ( let row = 1; row < height - 1; row++ ) {
 		for ( let col = 1; col < width - 1; col++ ) {
@@ -62,20 +51,24 @@ function sharpen( imageData ) {
 			let sumG = 0;
 			let sumB = 0;
 
+			// Apply 3x3 convolution kernel:
 			for ( let ky = -1; ky <= 1; ky++ ) {
 				for ( let kx = -1; kx <= 1; kx++ ) {
 					const ny = row + ky;
 					const nx = col + kx;
+					const idx = ( ny * rowBytes ) + ( nx * 4 );
 					const ki = ( ( ky + 1 ) * 3 ) + ( kx + 1 );
 					const w = KERNEL[ ki ];
-					sumR += original.get( ny, nx, 0 ) * w;
-					sumG += original.get( ny, nx, 1 ) * w;
-					sumB += original.get( ny, nx, 2 ) * w;
+					sumR += original[ idx ] * w;
+					sumG += original[ idx + 1 ] * w;
+					sumB += original[ idx + 2 ] * w;
 				}
 			}
-			arr.set( row, col, 0, clamp( round( sumR ), 0, 255 ) );
-			arr.set( row, col, 1, clamp( round( sumG ), 0, 255 ) );
-			arr.set( row, col, 2, clamp( round( sumB ), 0, 255 ) );
+
+			const outIdx = ( row * rowBytes ) + ( col * 4 );
+			data[ outIdx ] = clamp( round( sumR ), 0, 255 );
+			data[ outIdx + 1 ] = clamp( round( sumG ), 0, 255 );
+			data[ outIdx + 2 ] = clamp( round( sumB ), 0, 255 );
 		}
 	}
 	return imageData;

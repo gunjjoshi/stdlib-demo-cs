@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray, ndarray } from './ndarray.js';
 import { ImageData } from '../image-data.js';
 import floor from '@stdlib/math-base-special-floor';
 import max from '@stdlib/math-base-special-max';
@@ -29,7 +28,7 @@ import Uint8ClampedArray from '@stdlib/array-uint8c';
 // MAIN //
 
 /**
-* Crops image to specified region using ndarray slicing.
+* Crops image to specified region.
 *
 * @param {ImageData} imageData - source image data
 * @param {number} cropX - x offset percentage (0-100)
@@ -39,10 +38,9 @@ import Uint8ClampedArray from '@stdlib/array-uint8c';
 * @returns {ImageData} cropped image data
 */
 function crop( imageData, cropX, cropY, cropWidth, cropHeight ) {
-	// Create ndarray from source image:
-	const srcArr = createNdarray( imageData );
-	const srcHeight = srcArr.shape[ 0 ];
-	const srcWidth = srcArr.shape[ 1 ];
+	const srcData = imageData.data;
+	const srcWidth = imageData.width;
+	const srcHeight = imageData.height;
 
 	// Convert percentage values to pixel coordinates:
 	let startCol = floor( ( cropX / 100 ) * srcWidth );
@@ -56,16 +54,16 @@ function crop( imageData, cropX, cropY, cropWidth, cropHeight ) {
 	actualWidth = max( 1, min( actualWidth, srcWidth - startCol ) );
 	actualHeight = max( 1, min( actualHeight, srcHeight - startRow ) );
 
-	// Create destination ndarray:
+	// Create destination buffer:
 	const dstData = new Uint8ClampedArray( actualWidth * actualHeight * 4 );
-	const dstArr = new ndarray( 'uint8c', dstData, [ actualHeight, actualWidth, 4 ], [ actualWidth * 4, 4, 1 ], 0, 'row-major' ); // eslint-disable-line max-len
+	const srcRowBytes = srcWidth * 4;
+	const dstRowBytes = actualWidth * 4;
 
-	// Copy pixels using ndarray get/set methods:
 	for ( let row = 0; row < actualHeight; row++ ) {
-		for ( let col = 0; col < actualWidth; col++ ) {
-			for ( let c = 0; c < 4; c++ ) {
-				dstArr.set( row, col, c, srcArr.get( startRow + row, startCol + col, c ) ); // eslint-disable-line max-len
-			}
+		const srcRowOffset = ( ( startRow + row ) * srcRowBytes ) + ( startCol * 4 );
+		const dstRowOffset = row * dstRowBytes;
+		for ( let i = 0; i < dstRowBytes; i++ ) {
+			dstData[ dstRowOffset + i ] = srcData[ srcRowOffset + i ];
 		}
 	}
 	return new ImageData( dstData, actualWidth, actualHeight );

@@ -1,7 +1,7 @@
 /**
 * @license Apache-2.0
 *
-* Copyright (c) 2024 The Stdlib Authors.
+* Copyright (c) 2026 The Stdlib Authors.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
+import unary from '@stdlib/ndarray-base-unary';
 import floor from '@stdlib/math-base-special-floor';
 
 
@@ -32,21 +32,56 @@ import floor from '@stdlib/math-base-special-floor';
 * @returns {ImageData} modified image data
 */
 function posterize( imageData, levels = 4 ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const numPixels = imageData.width * imageData.height;
 	const step = 255 / ( levels - 1 );
 
-	for ( let row = 0; row < height; row++ ) {
-		for ( let col = 0; col < width; col++ ) {
-			const r = floor( arr.get( row, col, 0 ) / step ) * step;
-			const g = floor( arr.get( row, col, 1 ) / step ) * step;
-			const b = floor( arr.get( row, col, 2 ) / step ) * step;
-			arr.set( row, col, 0, r );
-			arr.set( row, col, 1, g );
-			arr.set( row, col, 2, b );
-		}
+	// Build lookup table for posterization:
+	const lut = new Uint8Array( 256 );
+	for ( let i = 0; i < 256; i++ ) {
+		lut[ i ] = floor( i / step ) * step;
 	}
+
+	/**
+	* Posterizes a single color value using lookup table.
+	*
+	* @private
+	* @param {number} x - input value (0-255)
+	* @returns {number} posterized value
+	*/
+	function posterizeValue( x ) {
+		return lut[ x ];
+	}
+
+	const rChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 0,
+		'order': 'row-major'
+	};
+	const gChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 1,
+		'order': 'row-major'
+	};
+	const bChannel = {
+		'dtype': 'uint8c',
+		'data': data,
+		'shape': [ numPixels ],
+		'strides': [ 4 ],
+		'offset': 2,
+		'order': 'row-major'
+	};
+
+	unary( [ rChannel, rChannel ], posterizeValue );
+	unary( [ gChannel, gChannel ], posterizeValue );
+	unary( [ bChannel, bChannel ], posterizeValue );
+
 	return imageData;
 }
 

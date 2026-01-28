@@ -5,8 +5,6 @@ import { performance } from 'node:perf_hooks';
 import { ImageData } from '../src/image-data.js';
 import { applyOperation, OPERATIONS } from '../src/operations.js';
 
-// Vercel Serverless Functions receive the raw request stream. We must disable the
-// default body parser in order to handle multipart/form-data uploads.
 export const config = {
   api: {
     bodyParser: false
@@ -18,10 +16,7 @@ globalThis.ImageData = ImageData;
 const upload = multer({ storage: multer.memoryStorage() });
 
 function setCorsHeaders(req, res) {
-  // NOTE: For simplest setup, default to permissive CORS. For production, set
-  // CORS_ORIGIN to your exact deployed client origin.
   let origin = String(process.env.CORS_ORIGIN || '*').trim();
-  // An Origin must not include a trailing slash. Also avoids easy misconfig.
   if (origin !== '*') {
     origin = origin.replace(/\/+$/, '');
   }

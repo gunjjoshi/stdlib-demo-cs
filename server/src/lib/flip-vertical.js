@@ -18,7 +18,6 @@
 
 // MODULES //
 
-import { createNdarray } from './ndarray.js';
 import floor from '@stdlib/math-base-special-floor';
 
 
@@ -31,18 +30,22 @@ import floor from '@stdlib/math-base-special-floor';
 * @returns {ImageData} modified image data
 */
 function flipVertical( imageData ) {
-	const arr = createNdarray( imageData );
-	const height = arr.shape[ 0 ];
-	const width = arr.shape[ 1 ];
+	const data = imageData.data;
+	const width = imageData.width;
+	const height = imageData.height;
+	const rowBytes = width * 4;
+	const halfHeight = floor( height / 2 );
 
-	for ( let row = 0; row < floor( height / 2 ); row++ ) {
-		const bottomRow = height - 1 - row;
-		for ( let col = 0; col < width; col++ ) {
-			for ( let c = 0; c < 4; c++ ) {
-				const temp = arr.get( row, col, c );
-				arr.set( row, col, c, arr.get( bottomRow, col, c ) );
-				arr.set( bottomRow, col, c, temp );
-			}
+	// Swap entire rows from top to bottom:
+	for ( let row = 0; row < halfHeight; row++ ) {
+		const topOffset = row * rowBytes;
+		const bottomOffset = ( height - 1 - row ) * rowBytes;
+
+		// Swap all pixels in the row:
+		for ( let i = 0; i < rowBytes; i++ ) {
+			const temp = data[ topOffset + i ];
+			data[ topOffset + i ] = data[ bottomOffset + i ];
+			data[ bottomOffset + i ] = temp;
 		}
 	}
 	return imageData;
